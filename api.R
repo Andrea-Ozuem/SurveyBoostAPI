@@ -52,6 +52,12 @@ run_stratification <- function(y, h, n, cost_vec = NULL, budget = NULL, fixed_co
 # Plumber API endpoint
 # -------------------------------
 
+#* @get /
+#* Health check endpoint
+function() {
+  list(status = "ok", message = "Plumber API running 🚀")
+}
+
 #* @post /stratify
 #* @param data:list Numeric dataset
 #* @param h:int Number of strata
@@ -67,4 +73,15 @@ function(data, h, n, cost_vec = NULL, budget = NULL, fixed_cost = 0) {
   result <- run_stratification(y, as.integer(h), as.integer(n), cost_vec, as.integer(budget), as.integer(fixed_cost))
   
   return(result)
+}
+
+# -------------------------------
+# Start the API (for Render)
+# -------------------------------
+if (sys.nframe() == 0) {
+  pr <- plumber::plumb("api.R")
+  pr$run(
+    host = "0.0.0.0",
+    port = as.numeric(Sys.getenv("PORT", 8000))
+  )
 }

@@ -13,9 +13,27 @@ calc_var_stratified_mean <- function(dp_res) {
   return(var_mean)
 }
 
+
 run_stratification <- function(y, h, n, cost_vec = NULL, budget = NULL, fixed_cost = 0) {
   if (!is.numeric(y)) stop("Dataset must be numeric")
   if (length(y) < h) stop("Dataset must be larger than number of strata")
+  
+  # ---- Data Preprocessing (new) ----
+  transform <- "none"
+  
+  # Detect extreme range (e.g. > 1e4 difference between max and min)
+  rng <- range(y, na.rm = TRUE)
+  if (diff(log10(rng + 1)) > 4) {
+    y <- log1p(y)   # log-transform to reduce skew
+    transform <- "log1p"
+  }
+  
+  # Standardize if very high variance
+  if (sd(y, na.rm = TRUE) > 1e6) {
+    y <- scale(y)
+    transform <- ifelse(transform == "none", "scaled", paste(transform, "+ scaled"))
+  }
+  
   
   if (!is.null(cost_vec)) {
     res <- strata.data(
@@ -35,6 +53,12 @@ run_stratification <- function(y, h, n, cost_vec = NULL, budget = NULL, fixed_co
   
   total_variance <- calc_var_stratified_mean(res) # total variance
   
+  # ---- Retransform boundaries if log1p was applied ----
+  boundaries <- res$OSB
+  if (transform == "log1p") {
+    boundaries <- expm1(boundaries)
+  }
+  
   nh <- res$nh
   total_cost <- NULL
   feasible   <- NULL
@@ -47,10 +71,10 @@ run_stratification <- function(y, h, n, cost_vec = NULL, budget = NULL, fixed_co
   }
   
   output <- list(
-    strata_boundaries = res$OSB,
+    strata_boundaries = boundaries,
     strata_allocation = res$nh,
     strata_sizes      = res$Nh,
-    variance          = total_variance,
+    var_mean          = total_variance,
     total_cost        = total_cost,
     budget            = budget,
     feasible          = feasible

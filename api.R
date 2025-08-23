@@ -3,6 +3,16 @@ library(stratifyR)
 library(jsonlite)
 
 # Your backend function
+calc_var_stratified_mean <- function(dp_res) {
+  Nh <- dp_res$Nh        # stratum population sizes
+  nh <- dp_res$nh        # stratum sample sizes
+  Sh2 <- dp_res$Vh       # stratum variances
+  N  <- dp_res$NhTot       # total population size
+  
+  var_mean <- sum((Nh / N)^2 * (Sh2 / nh) * (1 - nh / Nh))
+  return(var_mean)
+}
+
 run_stratification <- function(y, h, n, cost_vec = NULL, budget = NULL, fixed_cost = 0) {
   if (!is.numeric(y)) stop("Dataset must be numeric")
   if (length(y) < h) stop("Dataset must be larger than number of strata")
@@ -23,7 +33,7 @@ run_stratification <- function(y, h, n, cost_vec = NULL, budget = NULL, fixed_co
     )
   }
   
-  total_variance <- sum(res$Vh) # total variance
+  total_variance <- calc_var_stratified_mean(res) # total variance
   
   nh <- res$nh
   total_cost <- NULL
